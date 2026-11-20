@@ -45,7 +45,8 @@ class Decision:
     fair: float
     bid: float | None
     ask: float | None
-    action: str = "hold"     # buy_yes, buy_no, hold
+    action: str = "hold"     # buy_yes, buy_no, pending_approval, hold
+    side: str = ""           # for pending orders: the side the agent wants
     edge: float = 0.0
     size_usd: float = 0.0
     reason: str = ""
@@ -127,6 +128,8 @@ def run_once(g: Guardrails | None = None, approve=None) -> RunReport:
                 if size < 1:
                     d.reason = "budget exhausted or stake too small"
                 elif size > g.approval_above_usd and not (approve and approve(d)):
+                    d.action, d.edge, d.size_usd = "pending_approval", round(edge, 4), round(size, 2)
+                    d.side = side
                     d.reason = "needs human approval"
                 else:
                     d.action, d.edge, d.size_usd = side, round(edge, 4), round(size, 2)
@@ -144,5 +147,5 @@ def _log(rep: RunReport, g: Guardrails) -> None:
     LEDGER.parent.mkdir(parents=True, exist_ok=True)
     with LEDGER.open("a") as f:
         for d in rep.decisions:
-            if d.action != "hold":
+            if d.action in ("buy_yes", "buy_no"):
                 f.write(json.dumps({"ts": rep.started_at, **asdict(d), "dry_run": g.dry_run}) + "\n")

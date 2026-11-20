@@ -6,17 +6,21 @@
 <title>Gemini Edge Agent</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
-:root{--bg:#0d1016;--panel:#151a23;--line:#262d3a;--fg:#e6e9ef;--muted:#8e98aa;--accent:#00d4b4;--buy:#3fd08a;--sell:#ff7a6b;--warn:#f2b84b;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;--sans:"IBM Plex Sans",system-ui,sans-serif}
+:root{--bg:#0d1016;--panel:#151a23;--panel2:#1b2130;--line:#262d3a;--fg:#e6e9ef;--muted:#8e98aa;--accent:#00d4b4;--buy:#3fd08a;--sell:#ff7a6b;--warn:#f2b84b;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;--sans:"IBM Plex Sans",system-ui,sans-serif}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:14px}
-header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;padding:20px 28px;border-bottom:1px solid var(--line)}
-h1{margin:0;font-size:20px;letter-spacing:.2px}h1 span{color:var(--accent)}
-.sub{color:var(--muted);font-size:13px;margin-top:4px}
+header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--line)}
+h1{margin:0;font-size:20px}h1 span{color:var(--accent)}
+.sub{color:var(--muted);font-size:13px;margin-top:4px;max-width:760px}
 .status{font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;gap:10px;align-items:center}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--warn)}.dot.ok{background:var(--buy)}.dot.bad{background:var(--sell)}
 button{background:var(--accent);color:#04211c;border:0;border-radius:6px;padding:8px 14px;font-weight:600;cursor:pointer;font-family:var(--sans)}
-button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
-main{padding:24px 28px;display:flex;flex-direction:column;gap:24px;max-width:1400px;margin:0 auto}
+button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+button.approve{background:var(--warn);color:#2a1c00;padding:4px 10px;font-size:12px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+main{padding:22px 28px;display:flex;flex-direction:column;gap:22px;max-width:1400px;margin:0 auto}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media (max-width:1000px){.two{grid-template-columns:1fr}}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
 .k{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .v{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
@@ -25,19 +29,26 @@ h2{font-size:15px;margin:0 0 10px}
 .loop{display:flex;flex-wrap:wrap;gap:8px;font-family:var(--mono);font-size:12px}
 .loop span{background:var(--panel);border:1px solid var(--line);padding:6px 10px;border-radius:5px}
 .loop b{color:var(--accent);font-weight:500}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;align-items:end}
+.ctl{display:flex;flex-direction:column;gap:6px}
+.ctl label{font-size:12px;color:var(--muted);display:flex;justify-content:space-between}
+.ctl label b{color:var(--fg);font-family:var(--mono);font-weight:500}
+input[type=range]{width:100%;accent-color:var(--accent)}
 .scroll{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px}
 table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
 th,td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
 th{font-family:var(--mono);font-size:11px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.05em;position:sticky;top:0;background:var(--panel)}
 td.r,th.r{text-align:right}
+tbody tr{cursor:pointer}tbody tr:hover{background:var(--panel2)}tr.sel{background:#16322e}
 .pill{font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line)}
-.buy_yes{color:var(--buy);border-color:var(--buy)}.buy_no{color:var(--sell);border-color:var(--sell)}
+.buy_yes{color:var(--buy);border-color:var(--buy)}.buy_no{color:var(--sell);border-color:var(--sell)}.pending_approval{color:var(--warn);border-color:var(--warn)}
 .muted{color:var(--muted)}.pos{color:var(--buy)}.neg{color:var(--sell)}
 .bar{position:relative;height:6px;width:120px;background:#222937;border-radius:3px}
-.bar i{position:absolute;top:-3px;width:2px;height:12px}
-.bar .f{background:var(--accent)}.bar .bk{background:var(--muted);opacity:.6;height:6px;top:0}
-.err{background:#2a1515;border:1px solid var(--sell);color:var(--fg);padding:12px 14px;border-radius:8px}
-.filters{display:flex;gap:8px;flex-wrap:wrap}.filters label{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.bar i{position:absolute;top:-3px;width:2px;height:12px}.bar .f{background:var(--accent)}.bar .bk{background:var(--muted);opacity:.6;height:6px;top:0}
+.err{background:#2a1515;border:1px solid var(--sell);padding:12px 14px;border-radius:8px}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.filters label{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center}
+svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);flex-wrap:wrap}.legend i{display:inline-block;width:12px;height:3px;margin-right:6px;vertical-align:middle}
 footer{color:var(--muted);font-size:12px;padding:0 28px 28px;max-width:1400px;margin:0 auto}
 @media (max-width:640px){header,main,footer{padding-left:16px;padding-right:16px}}
 </style>
@@ -46,83 +57,159 @@ footer{color:var(--muted);font-size:12px;padding:0 28px 28px;max-width:1400px;ma
 <header>
   <div>
     <h1>Gemini <span>Edge</span> Agent</h1>
-    <div class="sub">Prices every Gemini crypto prediction market, checks prices against Chainlink onchain, and paper-trades mispricings inside hard limits.</div>
+    <div class="sub">An AI agent that prices every Gemini crypto prediction market, verifies prices against Chainlink onchain, and paper-trades mispricings inside hard limits.</div>
   </div>
-  <div class="status"><span id="dot" class="dot"></span><span id="stat">scanning…</span><button id="run">Run agent now</button></div>
+  <div class="status"><span id="dot" class="dot"></span><span id="stat">scanning…</span></div>
 </header>
 <main>
   <div id="error"></div>
-  <section>
-    <h2>Decision loop</h2>
-    <div class="loop"><span><b>1</b> Observe Gemini markets + spot</span><span><b>2</b> Verify vs Chainlink (Ethereum)</span><span><b>3</b> Price: fat-tailed digital</span><span><b>4</b> Decide: edge vs bid/ask</span><span><b>5</b> Guard: budget, caps, approval</span><span><b>6</b> Act: paper order + ledger</span></div>
+
+  <section class="card">
+    <h2 style="margin:0">Agent controls</h2>
+    <div class="controls">
+      <div class="ctl"><label for="budget">Budget per run <b id="budgetV"></b></label><input type="range" id="budget" min="50" max="2000" step="50" value="100"></div>
+      <div class="ctl"><label for="cap">Max per market <b id="capV"></b></label><input type="range" id="cap" min="5" max="100" step="5" value="10"></div>
+      <div class="ctl"><label for="minEdge">Minimum edge <b id="minEdgeV"></b></label><input type="range" id="minEdge" min="1" max="15" step="1" value="4"></div>
+      <div class="ctl"><button id="run">Run agent</button><span class="d">Orders above $25 wait for your approval. Paper trading only.</span></div>
+    </div>
+    <div class="loop" style="margin-top:6px"><span><b>1</b> Observe Gemini markets + spot</span><span><b>2</b> Verify vs Chainlink (Ethereum)</span><span><b>3</b> Price: fat-tailed digital</span><span><b>4</b> Decide: edge vs bid/ask</span><span><b>5</b> Guard: budget, caps, approval</span><span><b>6</b> Act: paper order + ledger</span></div>
   </section>
+
   <section class="grid" id="kpis"></section>
+
   <section>
     <h2>Onchain price check</h2>
     <div class="grid" id="oracle"></div>
   </section>
+
   <section>
-    <h2>Agent orders (paper)</h2>
+    <h2>Agent orders <span class="muted" style="font-weight:400">(click a row to chart it)</span></h2>
     <div class="scroll"><table id="orders"></table></div>
   </section>
+
+  <section class="two">
+    <div class="card">
+      <h2 style="margin:0" id="ladderTitle">Fair value vs Gemini book</h2>
+      <div class="legend"><span><i style="background:var(--accent)"></i>agent fair value</span><span><i style="background:#5b6578;height:8px"></i>Gemini bid–ask</span><span><i style="background:var(--warn)"></i>spot</span></div>
+      <svg id="ladder" viewBox="0 0 640 300" width="100%" role="img" aria-label="Fair value curve against Gemini bid and ask by strike"></svg>
+      <div class="d" id="ladderNote">Click any market below to chart its whole price ladder.</div>
+    </div>
+    <div class="card">
+      <h2 style="margin:0" id="histTitle">Odds over time</h2>
+      <div class="legend"><span><i style="background:var(--fg)"></i>Gemini mid</span><span><i style="background:var(--accent)"></i>agent fair value</span></div>
+      <svg id="hist" viewBox="0 0 640 300" width="100%" role="img" aria-label="Gemini mid and agent fair value over time"></svg>
+      <div class="d" id="histNote">One point per scan; the page rescans every 15 seconds.</div>
+    </div>
+  </section>
+
   <section>
     <div style="display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap">
-      <h2>All markets: fair value vs Gemini book</h2>
+      <h2>All markets</h2>
       <div class="filters">
         <label><input type="checkbox" id="onlyEdge"> only |edge| ≥ 3¢</label>
         <label>asset <select id="asset"><option value="">all</option><option>BTC</option><option>ETH</option><option>SOL</option><option>XRP</option></select></label>
       </div>
     </div>
-    <div class="scroll" style="max-height:560px"><table id="markets"></table></div>
+    <div class="scroll" style="max-height:520px"><table id="markets"></table></div>
   </section>
+
   <section>
     <h2>Guardrails</h2>
     <div class="grid" id="guards"></div>
   </section>
 </main>
-<footer>Data: Gemini Prediction Markets API, Gemini spot candles, Chainlink price feeds read from Ethereum mainnet. Paper trading only; no orders are sent.</footer>
+<footer>Data: Gemini Prediction Markets API, Gemini spot candles, Chainlink price feeds read from Ethereum mainnet. Paper trading only; no orders are sent to Gemini.</footer>
 <script>
 const $=id=>document.getElementById(id);
 const c=x=>x==null?'–':(100*x).toFixed(0)+'¢';
-const tl=m=>m<90?m.toFixed(0)+' min':m<2880?(m/60).toFixed(1)+' h':(m/1440).toFixed(1)+' d';
 const usd=x=>x==null?'–':'$'+Number(x).toLocaleString(undefined,{maximumFractionDigits:x<10?4:2});
-let last=null;
+const tl=m=>m<90?m.toFixed(0)+' min':m<2880?(m/60).toFixed(1)+' h':(m/1440).toFixed(1)+' d';
+const act=a=>a.replace('_',' ').replace('pending approval','needs approval');
+let last=null, selected=null;
+function params(){return `budget=${$('budget').value}&cap=${$('cap').value}&min_edge=${$('minEdge').value/100}`}
+function syncLabels(){$('budgetV').textContent='$'+$('budget').value;$('capV').textContent='$'+$('cap').value;$('minEdgeV').textContent=$('minEdge').value+'¢'}
 function bar(fair,bid,ask){if(bid==null||ask==null)return'';return `<div class="bar"><i class="bk" style="left:${bid*100}%;width:${Math.max(2,(ask-bid)*120)}px"></i><i class="f" style="left:${fair*100}%"></i></div>`}
 function render(d){
   $('error').innerHTML='';
   if(!d.ok){$('error').innerHTML=`<div class="err">The scan failed: ${d.error}. The page retries automatically.</div>`;$('dot').className='dot bad';$('stat').textContent='error';return}
   last=d;
   const orders=d.decisions.filter(x=>x.action!=='hold');
+  const filled=orders.filter(x=>x.action.startsWith('buy'));
+  const pending=orders.filter(x=>x.action==='pending_approval');
   const blocked=Object.keys(d.blocked||{});
   $('dot').className='dot '+(d.halted?'bad':'ok');
   $('stat').textContent='last scan '+new Date(d.started_at).toLocaleTimeString();
   $('kpis').innerHTML=[
     ['Markets priced',d.decisions.length,'BTC, ETH, SOL, XRP up/down and price ladders'],
-    ['Paper orders',orders.length,'passed every guardrail'],
+    ['Paper orders',filled.length,pending.length?`${pending.length} waiting for your approval`:'passed every guardrail'],
     ['Committed',usd(d.committed_usd),'of '+usd(d.guardrails.budget_usd)+' budget'],
     ['Assets blocked',blocked.length,blocked.length?blocked.join(', '):'onchain check passed'],
   ].map(([k,v,s])=>`<div class="card"><span class="k">${k}</span><span class="v">${v}</span><span class="d">${s}</span></div>`).join('');
-  $('oracle').innerHTML=Object.entries(d.oracle).map(([a,o])=>`<div class="card"><span class="k">${a} · ${o.description||'no Chainlink feed'}</span>
+  $('oracle').innerHTML=Object.entries(d.oracle).map(([a,o])=>`<div class="card"><span class="k">${a} · ${o.description||'no onchain feed'}</span>
     <span class="v">${usd(o.gemini_spot)}</span>
-    <span class="d">${o.chainlink?`Chainlink ${usd(o.chainlink)} · ${o.divergence_bp} bp apart · updated ${Math.round(o.age_s/60)} min ago`:'No mainnet feed: stakes halved'}</span>
-    <span class="d">${o.feed?`<code>${o.feed.slice(0,10)}…${o.feed.slice(-6)}</code>`:''} · ${d.vol_annualized[a]?('vol '+(d.vol_annualized[a]*100).toFixed(0)+'%'):''}</span>
+    <span class="d">${o.chainlink?`Chainlink ${usd(o.chainlink)} · ${o.divergence_bp} bp apart · updated ${Math.round(o.age_s/60)} min ago`:'No onchain feed configured'}</span>
+    <span class="d">${o.feed?`<code>${o.feed.slice(0,10)}…${o.feed.slice(-6)}</code> · `:''}${d.vol_annualized[a]?('vol '+(d.vol_annualized[a]*100).toFixed(0)+'%'):''}</span>
     ${d.blocked&&d.blocked[a]?`<span class="d neg">blocked: ${d.blocked[a]}</span>`:(o.chainlink?'<span class="d pos">verified onchain</span>':'<span class="d" style="color:var(--warn)">unverified: stakes halved</span>')}</div>`).join('');
-  const oh=`<tr><th>Market</th><th>Contract</th><th class="r">Time left</th><th class="r">Fair</th><th class="r">Bid / Ask</th><th>Action</th><th class="r">Edge</th><th class="r">Stake</th></tr>`;
-  $('orders').innerHTML=oh+(orders.length?orders.map(x=>`<tr><td>${x.title}</td><td>${x.label}</td><td class="r">${tl(x.minutes_left)}</td><td class="r">${c(x.fair)}</td><td class="r">${c(x.bid)} / ${c(x.ask)}</td><td><span class="pill ${x.action}">${x.action.replace('_',' ')}</span></td><td class="r pos">${(100*x.edge).toFixed(1)}¢</td><td class="r">${usd(x.size_usd)}</td></tr>`).join(''):'<tr><td colspan="8" class="muted">No market passed every guardrail on this scan.</td></tr>');
+  const oh=`<thead><tr><th>Market</th><th>Contract</th><th class="r">Time left</th><th class="r">Fair</th><th class="r">Bid / Ask</th><th>Action</th><th class="r">Edge</th><th class="r">Stake</th><th></th></tr></thead>`;
+  $('orders').innerHTML=oh+'<tbody>'+(orders.length?orders.map(x=>`<tr data-sym="${x.symbol}" class="${x.symbol===selected?'sel':''}"><td>${x.title}</td><td>${x.label}</td><td class="r">${tl(x.minutes_left)}</td><td class="r">${c(x.fair)}</td><td class="r">${c(x.bid)} / ${c(x.ask)}</td><td><span class="pill ${x.action}">${act(x.action)}${x.side?' ('+act(x.side)+')':''}</span></td><td class="r pos">${(100*x.edge).toFixed(1)}¢</td><td class="r">${usd(x.size_usd)}</td><td>${x.action==='pending_approval'?`<button class="approve" data-approve="${x.symbol}">Approve</button>`:''}</td></tr>`).join(''):'<tr><td colspan="9" class="muted">No market passed every guardrail on this scan. Try a lower minimum edge.</td></tr>')+'</tbody>';
   drawMarkets();
+  if(!selected&&orders.length)selected=orders[0].symbol;
+  if(!selected&&d.decisions.length)selected=d.decisions[0].symbol;
+  drawCharts();
 }
 function drawMarkets(){
   if(!last)return;const a=$('asset').value,only=$('onlyEdge').checked;
   const rows=last.decisions.filter(x=>(!a||x.asset===a)).map(x=>{const e=x.bid!=null&&x.ask!=null?Math.max(x.fair-x.ask,x.bid-x.fair):null;return{...x,e}}).filter(x=>!only||(x.e!=null&&Math.abs(x.e)>=0.03));
-  $('markets').innerHTML=`<tr><th>Asset</th><th>Market</th><th>Contract</th><th class="r">Time left</th><th class="r">Strike</th><th class="r">Fair</th><th class="r">Bid / Ask</th><th>Fair vs book</th><th class="r">Best edge</th><th>Agent</th></tr>`+
-   rows.map(x=>`<tr><td>${x.asset}</td><td>${x.title}</td><td>${x.label}</td><td class="r">${tl(x.minutes_left)}</td><td class="r">${x.strike==null?'at start':usd(x.strike)}</td><td class="r">${c(x.fair)}</td><td class="r">${c(x.bid)} / ${c(x.ask)}</td><td>${bar(x.fair,x.bid,x.ask)}</td><td class="r ${x.e>0?'pos':'muted'}">${x.e==null?'–':(100*x.e).toFixed(1)+'¢'}</td><td class="muted">${x.action!=='hold'?`<span class="pill ${x.action}">${x.action.replace('_',' ')}</span>`:x.reason}</td></tr>`).join('');
+  $('markets').innerHTML=`<thead><tr><th>Asset</th><th>Market</th><th>Contract</th><th class="r">Time left</th><th class="r">Strike</th><th class="r">Fair</th><th class="r">Bid / Ask</th><th>Fair vs book</th><th class="r">Best edge</th><th>Agent</th></tr></thead><tbody>`+
+   rows.map(x=>`<tr data-sym="${x.symbol}" class="${x.symbol===selected?'sel':''}"><td>${x.asset}</td><td>${x.title}</td><td>${x.label}</td><td class="r">${tl(x.minutes_left)}</td><td class="r">${x.strike==null?'at start':usd(x.strike)}</td><td class="r">${c(x.fair)}</td><td class="r">${c(x.bid)} / ${c(x.ask)}</td><td>${bar(x.fair,x.bid,x.ask)}</td><td class="r ${x.e>0?'pos':'muted'}">${x.e==null?'–':(100*x.e).toFixed(1)+'¢'}</td><td class="muted">${x.action!=='hold'?`<span class="pill ${x.action}">${act(x.action)}</span>`:x.reason}</td></tr>`).join('')+'</tbody>';
   const g=last.guardrails;
-  $('guards').innerHTML=[['Budget per run',usd(g.budget_usd)],['Max per market',usd(g.max_per_market_usd)],['Minimum edge',(100*g.min_edge).toFixed(0)+'¢'],['Max spread',(100*g.max_spread).toFixed(0)+'¢'],['Trades only between',g.min_minutes_to_expiry+' min and '+(g.max_minutes_to_expiry/60)+' h to expiry'],['Oracle divergence limit',g.max_oracle_divergence_bp+' bp'],['Human approval above',usd(g.approval_above_usd)],['Mode',g.dry_run?'paper only':'live']]
+  $('guards').innerHTML=[['Budget per run',usd(g.budget_usd)],['Max per market',usd(g.max_per_market_usd)],['Minimum edge',(100*g.min_edge).toFixed(0)+'¢'],['Max spread',(100*g.max_spread).toFixed(0)+'¢'],['Trades only between',g.min_minutes_to_expiry+' min and '+(g.max_minutes_to_expiry/60)+' h to expiry'],['Onchain divergence limit',g.max_oracle_divergence_bp+' bp'],['Human approval above',usd(g.approval_above_usd)],['Mode',g.dry_run?'paper only':'live']]
    .map(([k,v])=>`<div class="card"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
 }
-async function scan(){$('stat').textContent='scanning…';try{const r=await fetch('/api/scan');render(await r.json())}catch(e){render({ok:false,error:e.message})}}
+function drawLadder(){
+  const s=$('ladder');if(!last||!selected){s.innerHTML='';return}
+  const pick=last.decisions.find(x=>x.symbol===selected);if(!pick)return;
+  const pts=last.decisions.filter(x=>x.title===pick.title&&x.asset===pick.asset&&x.strike!=null).sort((a,b)=>a.strike-b.strike);
+  $('ladderTitle').textContent=pick.title+' · fair value vs Gemini book';
+  if(pts.length<2){$('ladderNote').textContent=`${pick.label}: one contract in this market (an up/down window). Agent fair ${c(pick.fair)} vs Gemini ${c(pick.bid)} / ${c(pick.ask)}. Pick a "price today/on" market for a full ladder.`;s.innerHTML='';
+    s.innerHTML=`<text x="20" y="150" style="font-size:14px">Fair ${c(pick.fair)}   ·   Gemini ${c(pick.bid)} / ${c(pick.ask)}</text>`;return}
+  const W=640,H=300,L=44,R=16,T=14,B=34,lo=pts[0].strike,hi=pts[pts.length-1].strike;
+  const x=k=>L+(k-lo)/((hi-lo)||1)*(W-L-R),y=p=>T+(1-p)*(H-T-B);
+  let g='';for(const p of [0,.25,.5,.75,1])g+=`<line x1="${L}" x2="${W-R}" y1="${y(p)}" y2="${y(p)}" stroke="#262d3a"/><text x="6" y="${y(p)+3}">${p*100}¢</text>`;
+  const step=Math.max(1,Math.ceil(pts.length/7));pts.forEach((p,i)=>{if(i%step===0)g+=`<text x="${x(p.strike)-18}" y="${H-12}">${p.strike>=1000?(p.strike/1000).toFixed(1)+'k':p.strike}</text>`});
+  pts.forEach(p=>{if(p.bid!=null&&p.ask!=null)g+=`<rect x="${x(p.strike)-4}" y="${y(p.ask)}" width="8" height="${Math.max(2,y(p.bid)-y(p.ask))}" fill="#5b6578" rx="2"/>`});
+  g+=`<polyline fill="none" stroke="var(--accent)" stroke-width="2.5" points="${pts.map(p=>x(p.strike)+','+y(p.fair)).join(' ')}"/>`;
+  pts.forEach(p=>{g+=`<circle cx="${x(p.strike)}" cy="${y(p.fair)}" r="${p.symbol===selected?5:2.5}" fill="${p.symbol===selected?'var(--fg)':'var(--accent)'}"/>`});
+  const sp=pick.spot;if(sp>=lo&&sp<=hi)g+=`<line x1="${x(sp)}" x2="${x(sp)}" y1="${T}" y2="${H-B}" stroke="var(--warn)" stroke-dasharray="4 4"/><text x="${x(sp)+4}" y="${T+10}" style="fill:var(--warn)">spot ${usd(sp)}</text>`;
+  s.innerHTML=g;
+  const mis=pts.filter(p=>p.bid!=null&&(p.fair>p.ask||p.fair<p.bid)).length;
+  $('ladderNote').textContent=`${pts.length} strikes · the curve sits outside Gemini's bid–ask on ${mis} of them · selected: ${pick.label}`;
+}
+async function drawHist(){
+  const s=$('hist');if(!selected){s.innerHTML='';return}
+  const pick=last&&last.decisions.find(x=>x.symbol===selected);
+  $('histTitle').textContent='Odds over time · '+(pick?pick.title+' · '+pick.label:selected);
+  const r=await fetch('/api/history?symbol='+encodeURIComponent(selected));const h=(await r.json()).points;
+  const W=640,H=300,L=44,R=16,T=14,B=34;
+  if(h.length<2){s.innerHTML=`<text x="20" y="150" style="font-size:13px">Collecting… ${h.length} point${h.length===1?'':'s'} so far (one per scan, every 15 s)</text>`;return}
+  const vals=h.flatMap(p=>[p.mid,p.fair]);let lo=Math.max(0,Math.min(...vals)-.05),hi=Math.min(1,Math.max(...vals)+.05);
+  const x=i=>L+i/(h.length-1)*(W-L-R),y=p=>T+(1-(p-lo)/((hi-lo)||1))*(H-T-B);
+  let g='';for(let k=0;k<=4;k++){const p=lo+(hi-lo)*k/4;g+=`<line x1="${L}" x2="${W-R}" y1="${y(p)}" y2="${y(p)}" stroke="#262d3a"/><text x="6" y="${y(p)+3}">${(p*100).toFixed(0)}¢</text>`}
+  g+=`<text x="${L}" y="${H-12}">${new Date(h[0].t).toLocaleTimeString()}</text><text x="${W-R-70}" y="${H-12}">${new Date(h[h.length-1].t).toLocaleTimeString()}</text>`;
+  g+=`<polyline fill="none" stroke="var(--fg)" stroke-width="2" points="${h.map((p,i)=>x(i)+','+y(p.mid)).join(' ')}"/>`;
+  g+=`<polyline fill="none" stroke="var(--accent)" stroke-width="2.5" points="${h.map((p,i)=>x(i)+','+y(p.fair)).join(' ')}"/>`;
+  s.innerHTML=g;$('histNote').textContent=`${h.length} scans · latest: Gemini mid ${c(h[h.length-1].mid)}, agent fair ${c(h[h.length-1].fair)}`;
+}
+function drawCharts(){drawLadder();drawHist();document.querySelectorAll('tr[data-sym]').forEach(r=>r.classList.toggle('sel',r.dataset.sym===selected))}
+async function scan(){$('stat').textContent='scanning…';try{const r=await fetch('/api/scan?'+params());render(await r.json())}catch(e){render({ok:false,error:e.message})}}
+document.addEventListener('click',async e=>{
+  const ap=e.target.closest('[data-approve]');
+  if(ap){e.stopPropagation();ap.textContent='Approving…';await fetch('/api/approve?symbol='+encodeURIComponent(ap.dataset.approve),{method:'POST'});selected=ap.dataset.approve;return scan()}
+  const row=e.target.closest('tr[data-sym]');if(row){selected=row.dataset.sym;drawCharts()}
+});
+['budget','cap','minEdge'].forEach(id=>$(id).addEventListener('input',syncLabels));
 $('run').onclick=scan;$('asset').onchange=drawMarkets;$('onlyEdge').onchange=drawMarkets;
-scan();setInterval(scan,30000);
+syncLabels();scan();setInterval(scan,15000);
 </script>
 </body>
 </html>

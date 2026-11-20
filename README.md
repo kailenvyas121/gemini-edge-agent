@@ -28,6 +28,14 @@ Every scan, the agent:
 5. **Guards.** It checks budget, per-market caps, minimum edge, spread, time to expiry, and human approval above a size limit.
 6. **Acts.** It writes a paper order to `output/ledger.jsonl` and shows it on the dashboard.
 
+## The dashboard
+
+- **Agent controls:** sliders for budget, max stake per market and minimum edge, then "Run agent". Decisions update live.
+- **Human approval:** orders above $25 appear as "needs approval" with an **Approve** button, and the agent places them only after you click it.
+- **Fair value vs Gemini book:** click any market to chart its whole price ladder, with the agent's fair-value curve drawn over Gemini's bid–ask at every strike, plus spot.
+- **Odds over time:** Gemini's mid and the agent's fair value for the selected contract, one point per scan (every 15 s).
+- **Onchain price check, all markets, guardrails:** every decision, including skipped markets and the reason.
+
 ## Run it
 
 ```bash

@@ -55,6 +55,6 @@ def test_live_scan_is_consistent_and_fast():
     assert rep.committed_usd <= g.budget_usd
     for d in rep.decisions:
         assert 0 <= d.fair <= 1
-        if d.action != "hold":
+        if d.action in ("buy_yes", "buy_no"):
             assert d.edge >= g.min_edge and g.min_minutes_to_expiry <= d.minutes_left <= g.max_minutes_to_expiry
             assert d.size_usd <= g.max_per_market_usd
