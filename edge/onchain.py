@@ -38,8 +38,12 @@ def chainlink_price(asset: str) -> dict | None:
     feed = FEEDS.get(asset)
     if feed is None:
         return None
-    raw = bytes.fromhex(_call(feed, LATEST_ROUND_DATA)[2:])
-    words = [int.from_bytes(raw[i:i + 32], "big", signed=True) for i in range(0, 160, 32)]
-    round_id, answer, _, updated_at, _ = words
-    return {"price": answer / 1e8, "updated_at": updated_at, "round_id": round_id, "feed": feed,
+    return {**decode_latest_round(_call(feed, LATEST_ROUND_DATA)), "feed": feed,
             "description": _decode_string(_call(feed, DESCRIPTION))}
+
+
+def decode_latest_round(hexdata: str) -> dict:
+    """Decode latestRoundData() → (roundId, answer, startedAt, updatedAt, answeredInRound); answer has 8 decimals."""
+    raw = bytes.fromhex(hexdata[2:])
+    round_id, answer, _, updated_at, _ = (int.from_bytes(raw[i:i + 32], "big", signed=True) for i in range(0, 160, 32))
+    return {"price": answer / 1e8, "updated_at": updated_at, "round_id": round_id}

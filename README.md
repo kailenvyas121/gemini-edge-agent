@@ -39,10 +39,23 @@ pip install -r requirements.txt
 python server.py          # dashboard at http://localhost:8000 (refreshes every 30 s)
 python run.py             # one scan in the terminal
 python run.py --loop 5    # scan every 5 minutes
-pytest -q                 # offline tests: pricing math and every guardrail
+pytest -q                 # 30 offline tests (no network)
+LIVE=1 pytest -q tests/test_live.py   # live sanity checks against Gemini + Ethereum
 ```
 
 No API keys are needed. Gemini market data and Chainlink reads (via a public Ethereum RPC) are free.
+
+## Testing
+
+Every push runs the suite in GitHub Actions (`.github/workflows/ci.yml`).
+
+| Layer | File | What it proves |
+|---|---|---|
+| Unit | `tests/test_unit.py` | Each function on its own: closed-form pricing matches a 1M-path Monte Carlo; ladders are monotone; volatility recovers a known value and damps bid-ask bounce; the parser handles a **real Gemini API payload** (labels match strikes, bid ≤ ask, prices in 0–1); "buy NO" = 1 − best bid holds across the payload; the Chainlink decoder reads a **real `eth_call` result** |
+| Integration | `tests/test_integration.py` | The whole decision loop with the network mocked: it buys when edge is real; every guardrail blocks what it should (oracle divergence, mislabeled feed, wide book, last minutes, approval, budget never exceeded); the ledger records only orders |
+| End to end | `tests/test_e2e.py` | Real server → real API → agent → page rendered in **headless Chrome**: KPI cards, orders, onchain check and guardrails all appear; API errors show in the UI instead of crashing it |
+| Performance | `tests/test_performance.py` | 300 contracts priced in < 50 ms; a full decision loop in < 200 ms; cached dashboard API response in < 50 ms |
+| Live sanity | `tests/test_live.py` (opt-in) | Against real APIs: each Chainlink feed names the right asset and has 8 decimals; Gemini ticker, Gemini candles and Chainlink agree; every live contract is well formed; a live scan finishes in < 20 s and respects every limit |
 
 ## Architecture
 
@@ -77,7 +90,7 @@ flowchart LR
 | Chainlink ETH / USD | `0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419` | same |
 | Chainlink SOL / USD | `0x4ffC43a60e009B551865A93d232E33Fce9f01507` | same |
 
-XRP has no Chainlink mainnet feed. XRP trades are allowed, but their stake cap is halved because nothing independent verifies the price.
+The agent has no onchain feed configured for XRP, so XRP trades are allowed but their stake cap is halved. All three feeds report 8 decimals (checked with `decimals()`), and the agent blocks an asset if a feed's `description()` doesn't name that asset or its price isn't positive.
 
 **Why onchain:** the agent shouldn't trust a single exchange price. Chainlink is a decentralized, independently published price, so a bad print, a stale feed or a manipulated venue shows up as a gap between the two, and the agent stops trading that asset.
 
@@ -87,7 +100,7 @@ XRP has no Chainlink mainnet feed. XRP trades are allowed, but their stake cap i
 |---|---|---|
 | Budget per run | $100 | Hard cap on total premium committed |
 | Max per market | $10 (half for assets without an onchain check) | No single contract can hurt much |
-| Minimum edge | 4¢ | Covers fees, spread and model error |
+| Minimum edge | 4¢ | Buffer for fees, slippage and model error |
 | Max spread | 15¢ | Wide books mean the price isn't reliable |
 | No trades in the final | 2 minutes | Fast traders pick off quotes near expiry |
 | Model horizon | 24 hours | The short-term volatility model is only trusted out to a day; longer contracts are priced and shown but not traded |

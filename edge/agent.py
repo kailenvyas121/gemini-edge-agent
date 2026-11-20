@@ -89,7 +89,11 @@ def run_once(g: Guardrails | None = None, approve=None) -> RunReport:
             age = t0.timestamp() - cl["updated_at"]
             rep.oracle[asset] = {"gemini_spot": s, "chainlink": cl["price"], "divergence_bp": round(div_bp, 1),
                                  "age_s": round(age), "feed": cl["feed"], "description": cl["description"]}
-            if div_bp > g.max_oracle_divergence_bp or age > g.max_oracle_age_s:
+            if not cl["description"].startswith(asset):
+                rep.blocked[asset] = f"onchain feed describes itself as {cl['description']!r}, not {asset}"
+            elif cl["price"] <= 0:
+                rep.blocked[asset] = "onchain price is not positive"
+            elif div_bp > g.max_oracle_divergence_bp or age > g.max_oracle_age_s:
                 rep.blocked[asset] = f"Gemini vs Chainlink {div_bp:.0f} bp apart, onchain price {age / 60:.0f} min old"
         else:
             rep.oracle[asset] = {"gemini_spot": s, "chainlink": None, "note": "no Chainlink mainnet feed; trades capped"}

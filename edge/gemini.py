@@ -53,34 +53,41 @@ def _asset(event: dict) -> str | None:
     return series if series in {"BTC", "ETH", "SOL", "XRP"} else None
 
 
+def parse_events(events: list[dict]) -> list[Market]:
+    """Normalize Gemini events into tradable contracts with a parsable strike rule."""
+    out = []
+    for e in events:
+        asset = _asset(e)
+        if asset is None or e.get("status") != "active":
+            continue
+        for c in e.get("contracts", []):
+            if c.get("marketState") != "open":
+                continue
+            strike = c.get("strike") or {}
+            if strike.get("type") == "reference":
+                kind = "up"
+            elif strike.get("type") == "above":
+                kind = "above"
+            else:
+                continue  # ranges and other rules are skipped rather than mispriced
+            p = c.get("prices") or {}
+            out.append(Market(
+                symbol=c.get("instrumentSymbol", ""), title=e.get("title", ""), label=c.get("label", ""),
+                asset=asset, kind=kind, strike=_f(strike.get("value")),
+                start=_ts(c.get("effectiveDate") if kind == "up" else None),
+                expiry=_ts(c.get("expiryDate") or e.get("expiryDate")),
+                bid=_f(p.get("bestBid")), ask=_f(p.get("bestAsk")), last=_f(p.get("lastTradePrice")),
+                source=c.get("source", ""), volume=_f(e.get("volume")) or 0.0))
+    return out
+
+
 def fetch_markets(category: str = "Crypto") -> list[Market]:
     """Every active crypto contract with a parsable strike rule (up/down windows and price ladders)."""
     out, offset = [], 0
     while True:
         d = _get("/v1/prediction-markets/events", {"category": category, "limit": 100, "offset": offset})
         events = d.get("data", [])
-        for e in events:
-            asset = _asset(e)
-            if asset is None or e.get("status") != "active":
-                continue
-            for c in e.get("contracts", []):
-                if c.get("marketState") != "open":
-                    continue
-                strike = c.get("strike") or {}
-                if strike.get("type") == "reference":
-                    kind = "up"
-                elif strike.get("type") == "above":
-                    kind = "above"
-                else:
-                    continue  # ranges and other rules are skipped rather than mispriced
-                p = c.get("prices") or {}
-                out.append(Market(
-                    symbol=c.get("instrumentSymbol", ""), title=e.get("title", ""), label=c.get("label", ""),
-                    asset=asset, kind=kind, strike=_f(strike.get("value")),
-                    start=_ts(c.get("effectiveDate") if kind == "up" else None),
-                    expiry=_ts(c.get("expiryDate") or e.get("expiryDate")),
-                    bid=_f(p.get("bestBid")), ask=_f(p.get("bestAsk")), last=_f(p.get("lastTradePrice")),
-                    source=c.get("source", ""), volume=_f(e.get("volume")) or 0.0))
+        out += parse_events(events)
         offset += len(events)
         if not events or offset >= d.get("pagination", {}).get("total", 0):
             break
