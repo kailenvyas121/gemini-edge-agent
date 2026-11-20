@@ -24,6 +24,7 @@ class Guardrails:
     min_edge: float = 0.04               # fair − price must beat this (covers fees and model error)
     max_spread: float = 0.15             # skip books wider than 15¢
     min_minutes_to_expiry: float = 2.0   # no trading in the final minutes (pick-off risk)
+    max_minutes_to_expiry: float = 1440  # short-term volatility model is only trusted out to a day
     # Chainlink updates on a ~0.5–1% move or a heartbeat, so tens of bp of gap is normal.
     max_oracle_divergence_bp: float = 150  # Gemini spot vs Chainlink onchain; above this, that asset is blocked
     max_oracle_age_s: float = 86_400       # onchain price older than this → that asset is blocked
@@ -106,6 +107,8 @@ def run_once(g: Guardrails | None = None, approve=None) -> RunReport:
             d.reason = f"blocked: {rep.blocked[m.asset]}"
         elif minutes < g.min_minutes_to_expiry:
             d.reason = "too close to expiry"
+        elif minutes > g.max_minutes_to_expiry:
+            d.reason = "beyond model horizon (24h)"
         elif m.bid is None or m.ask is None or m.ask - m.bid > g.max_spread:
             d.reason = "book too wide or one-sided"
         else:

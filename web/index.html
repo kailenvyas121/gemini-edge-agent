@@ -84,6 +84,7 @@ footer{color:var(--muted);font-size:12px;padding:0 28px 28px;max-width:1400px;ma
 <script>
 const $=id=>document.getElementById(id);
 const c=x=>x==null?'–':(100*x).toFixed(0)+'¢';
+const tl=m=>m<90?m.toFixed(0)+' min':m<2880?(m/60).toFixed(1)+' h':(m/1440).toFixed(1)+' d';
 const usd=x=>x==null?'–':'$'+Number(x).toLocaleString(undefined,{maximumFractionDigits:x<10?4:2});
 let last=null;
 function bar(fair,bid,ask){if(bid==null||ask==null)return'';return `<div class="bar"><i class="bk" style="left:${bid*100}%;width:${Math.max(2,(ask-bid)*120)}px"></i><i class="f" style="left:${fair*100}%"></i></div>`}
@@ -105,18 +106,18 @@ function render(d){
     <span class="v">${usd(o.gemini_spot)}</span>
     <span class="d">${o.chainlink?`Chainlink ${usd(o.chainlink)} · ${o.divergence_bp} bp apart · updated ${Math.round(o.age_s/60)} min ago`:'No mainnet feed: stakes halved'}</span>
     <span class="d">${o.feed?`<code>${o.feed.slice(0,10)}…${o.feed.slice(-6)}</code>`:''} · ${d.vol_annualized[a]?('vol '+(d.vol_annualized[a]*100).toFixed(0)+'%'):''}</span>
-    ${d.blocked&&d.blocked[a]?`<span class="d neg">blocked: ${d.blocked[a]}</span>`:'<span class="d pos">verified</span>'}</div>`).join('');
-  const oh=`<tr><th>Market</th><th>Contract</th><th class="r">Min left</th><th class="r">Fair</th><th class="r">Bid / Ask</th><th>Action</th><th class="r">Edge</th><th class="r">Stake</th></tr>`;
-  $('orders').innerHTML=oh+(orders.length?orders.map(x=>`<tr><td>${x.title}</td><td>${x.label}</td><td class="r">${x.minutes_left}</td><td class="r">${c(x.fair)}</td><td class="r">${c(x.bid)} / ${c(x.ask)}</td><td><span class="pill ${x.action}">${x.action.replace('_',' ')}</span></td><td class="r pos">${(100*x.edge).toFixed(1)}¢</td><td class="r">${usd(x.size_usd)}</td></tr>`).join(''):'<tr><td colspan="8" class="muted">No market passed every guardrail on this scan.</td></tr>');
+    ${d.blocked&&d.blocked[a]?`<span class="d neg">blocked: ${d.blocked[a]}</span>`:(o.chainlink?'<span class="d pos">verified onchain</span>':'<span class="d" style="color:var(--warn)">unverified: stakes halved</span>')}</div>`).join('');
+  const oh=`<tr><th>Market</th><th>Contract</th><th class="r">Time left</th><th class="r">Fair</th><th class="r">Bid / Ask</th><th>Action</th><th class="r">Edge</th><th class="r">Stake</th></tr>`;
+  $('orders').innerHTML=oh+(orders.length?orders.map(x=>`<tr><td>${x.title}</td><td>${x.label}</td><td class="r">${tl(x.minutes_left)}</td><td class="r">${c(x.fair)}</td><td class="r">${c(x.bid)} / ${c(x.ask)}</td><td><span class="pill ${x.action}">${x.action.replace('_',' ')}</span></td><td class="r pos">${(100*x.edge).toFixed(1)}¢</td><td class="r">${usd(x.size_usd)}</td></tr>`).join(''):'<tr><td colspan="8" class="muted">No market passed every guardrail on this scan.</td></tr>');
   drawMarkets();
 }
 function drawMarkets(){
   if(!last)return;const a=$('asset').value,only=$('onlyEdge').checked;
   const rows=last.decisions.filter(x=>(!a||x.asset===a)).map(x=>{const e=x.bid!=null&&x.ask!=null?Math.max(x.fair-x.ask,x.bid-x.fair):null;return{...x,e}}).filter(x=>!only||(x.e!=null&&Math.abs(x.e)>=0.03));
-  $('markets').innerHTML=`<tr><th>Asset</th><th>Market</th><th>Contract</th><th class="r">Min left</th><th class="r">Strike</th><th class="r">Fair</th><th class="r">Bid / Ask</th><th>Fair vs book</th><th class="r">Best edge</th><th>Agent</th></tr>`+
-   rows.map(x=>`<tr><td>${x.asset}</td><td>${x.title}</td><td>${x.label}</td><td class="r">${x.minutes_left}</td><td class="r">${x.strike==null?'at start':usd(x.strike)}</td><td class="r">${c(x.fair)}</td><td class="r">${c(x.bid)} / ${c(x.ask)}</td><td>${bar(x.fair,x.bid,x.ask)}</td><td class="r ${x.e>0?'pos':'muted'}">${x.e==null?'–':(100*x.e).toFixed(1)+'¢'}</td><td class="muted">${x.action!=='hold'?`<span class="pill ${x.action}">${x.action.replace('_',' ')}</span>`:x.reason}</td></tr>`).join('');
+  $('markets').innerHTML=`<tr><th>Asset</th><th>Market</th><th>Contract</th><th class="r">Time left</th><th class="r">Strike</th><th class="r">Fair</th><th class="r">Bid / Ask</th><th>Fair vs book</th><th class="r">Best edge</th><th>Agent</th></tr>`+
+   rows.map(x=>`<tr><td>${x.asset}</td><td>${x.title}</td><td>${x.label}</td><td class="r">${tl(x.minutes_left)}</td><td class="r">${x.strike==null?'at start':usd(x.strike)}</td><td class="r">${c(x.fair)}</td><td class="r">${c(x.bid)} / ${c(x.ask)}</td><td>${bar(x.fair,x.bid,x.ask)}</td><td class="r ${x.e>0?'pos':'muted'}">${x.e==null?'–':(100*x.e).toFixed(1)+'¢'}</td><td class="muted">${x.action!=='hold'?`<span class="pill ${x.action}">${x.action.replace('_',' ')}</span>`:x.reason}</td></tr>`).join('');
   const g=last.guardrails;
-  $('guards').innerHTML=[['Budget per run',usd(g.budget_usd)],['Max per market',usd(g.max_per_market_usd)],['Minimum edge',(100*g.min_edge).toFixed(0)+'¢'],['Max spread',(100*g.max_spread).toFixed(0)+'¢'],['No trades in final',g.min_minutes_to_expiry+' min'],['Oracle divergence limit',g.max_oracle_divergence_bp+' bp'],['Human approval above',usd(g.approval_above_usd)],['Mode',g.dry_run?'paper only':'live']]
+  $('guards').innerHTML=[['Budget per run',usd(g.budget_usd)],['Max per market',usd(g.max_per_market_usd)],['Minimum edge',(100*g.min_edge).toFixed(0)+'¢'],['Max spread',(100*g.max_spread).toFixed(0)+'¢'],['Trades only between',g.min_minutes_to_expiry+' min and '+(g.max_minutes_to_expiry/60)+' h to expiry'],['Oracle divergence limit',g.max_oracle_divergence_bp+' bp'],['Human approval above',usd(g.approval_above_usd)],['Mode',g.dry_run?'paper only':'live']]
    .map(([k,v])=>`<div class="card"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
 }
 async function scan(){$('stat').textContent='scanning…';try{const r=await fetch('/api/scan');render(await r.json())}catch(e){render({ok:false,error:e.message})}}

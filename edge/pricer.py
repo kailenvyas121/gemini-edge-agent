@@ -18,13 +18,18 @@ NU = 4.5  # Student-t degrees of freedom; crypto 5–15 minute returns have exce
 MIN_PER_YEAR = 525_600
 
 
-def ewma_vol_per_min(closes: list[float], halflife: float = 30.0) -> float:
-    """Exponentially weighted volatility of 1-minute log returns (per minute)."""
-    r = np.diff(np.log(np.asarray(closes)))
-    if len(r) < 10:
-        raise ValueError("need at least 10 one-minute returns")
+def ewma_vol_per_min(closes: list[float], halflife: float = 24.0, step: int = 5) -> float:
+    """Volatility per minute from exponentially weighted 5-minute log returns.
+
+    5-minute returns, not 1-minute ones, because 1-minute prices bounce between bid and ask and
+    overstate volatility. `halflife` is in 5-minute steps (24 = 2 hours).
+    """
+    lp = np.log(np.asarray(closes))[::-1][::step][::-1]  # every 5th close, ending at the latest
+    r = np.diff(lp)
+    if len(r) < 6:
+        raise ValueError("need at least 30 minutes of 1-minute closes")
     w = 0.5 ** (np.arange(len(r))[::-1] / halflife)
-    return float(math.sqrt(np.sum(w * r**2) / np.sum(w)))
+    return float(math.sqrt(np.sum(w * r**2) / np.sum(w) / step))
 
 
 def prob_at_or_above(spot: float, strike: float, sigma_min: float, minutes: float, nu: float = NU) -> float:

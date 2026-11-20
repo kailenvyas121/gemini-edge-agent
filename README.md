@@ -63,7 +63,7 @@ flowchart LR
 |---|---|
 | `edge/gemini.py` | Gemini Prediction Markets client: paginates every active crypto event and normalizes each contract (asset, up/down vs price ladder, strike, expiry, bid/ask, settlement index) |
 | `edge/onchain.py` | Reads Chainlink aggregator contracts on Ethereum mainnet over JSON-RPC: `latestRoundData()` and `description()` |
-| `edge/pricer.py` | Volatility forecast (EWMA of 1-minute returns) and fat-tailed digital pricing |
+| `edge/pricer.py` | Volatility forecast (EWMA of 5-minute returns) and fat-tailed digital pricing |
 | `edge/agent.py` | The decision loop and guardrails |
 | `server.py`, `web/index.html` | Dashboard: standard-library HTTP server plus a single HTML page |
 | `run.py` | Command-line runner |
@@ -90,6 +90,7 @@ XRP has no Chainlink mainnet feed. XRP trades are allowed, but their stake cap i
 | Minimum edge | 4¢ | Covers fees, spread and model error |
 | Max spread | 15¢ | Wide books mean the price isn't reliable |
 | No trades in the final | 2 minutes | Fast traders pick off quotes near expiry |
+| Model horizon | 24 hours | The short-term volatility model is only trusted out to a day; longer contracts are priced and shown but not traded |
 | Onchain divergence limit | 150 bp | Gemini vs Chainlink. Chainlink updates on a ~0.5% move or a heartbeat, so smaller gaps are normal |
 | Onchain staleness limit | 24 h | Block the asset if the onchain price is too old |
 | Human approval | above $25 | Large orders need a person to say yes |
@@ -107,7 +108,7 @@ A contract paying $1 if the price at expiry is at or above K is worth
 
   fair = P(S_T ≥ K) = 1 − F_ν( ln(K/S) / (σ·√τ) )
 
-- S is spot, τ is minutes to expiry, and σ is per-minute volatility from an exponentially weighted average of recent 1-minute returns.
+- S is spot, τ is minutes to expiry, and σ is per-minute volatility from an exponentially weighted average of recent 5-minute returns (1-minute prices bounce between bid and ask and overstate volatility).
 - F_ν is a Student-t distribution with ν = 4.5, scaled to unit variance. The fat tails matter: a normal distribution overprices contracts that need a modest move and underprices big-move contracts.
 - For an up/down window that hasn't started, the strike is the price at the start, so fair ≈ 50%.
 - Drift is zero over minutes.
